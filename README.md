@@ -36,6 +36,26 @@ python -m app.cli plan
 python -m app.cli queue
 ```
 
+## Metrics (Telethon Collector)
+
+Telegram Bot API does not provide full per-post analytics for channels.
+To collect views/forwards/reactions snapshots you can run a MTProto collector
+with Telethon (it logs in as your Telegram user once).
+
+1) Create API credentials: https://my.telegram.org
+2) Put in `.env`:
+- `TELETHON_API_ID`
+- `TELETHON_API_HASH`
+- `TELETHON_SESSION`
+3) Run collector:
+
+```bash
+python -m app.telethon_collector
+```
+
+Then in bot chat:
+- `/metrics`
+
 ## Bot Setup
 
 1) Start the bot in Telegram: `/start`
