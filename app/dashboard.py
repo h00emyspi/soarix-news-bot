@@ -29,7 +29,7 @@ def _render_html(cfg: Config, storage: Storage) -> str:
         f"<td>{escape(str(item.get('posted_at') or ''))}</td>"
         f"<td>{escape(str(item.get('source') or ''))}</td>"
         f"<td>{escape(str(item.get('title') or ''))}</td>"
-        f"<td><a href='{escape(str(item.get('link') or ''))}' target='_blank' rel='noreferrer'>open</a></td>"
+        f"<td><a href='{escape(str(item.get('link') or ''))}' target='_blank' rel='noreferrer'>открыть</a></td>"
         "</tr>"
         for item in recent
     )
@@ -40,7 +40,7 @@ def _render_html(cfg: Config, storage: Storage) -> str:
 <html>
 <head>
   <meta charset='utf-8' />
-  <title>SOARIX Dashboard</title>
+  <title>SOARIX Панель управления</title>
   <style>
     body {{ font-family: Arial, sans-serif; margin: 24px; background: #fafafa; }}
     .grid {{ display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom:20px; }}
@@ -53,14 +53,14 @@ def _render_html(cfg: Config, storage: Storage) -> str:
   </style>
 </head>
 <body>
-  <h1>SOARIX News Bot Dashboard</h1>
+  <h1>SOARIX News Bot — панель управления</h1>
   <p>Метрики публикаций, target_chat_id и ручная публикация.</p>
 
   <div class='grid'>
-    <div class='card'><b>Total posts</b><br/>{metrics['total_posts']}</div>
-    <div class='card'><b>Posts last 24h</b><br/>{metrics['posts_last_24h']}</div>
-    <div class='card'><b>Timezone</b><br/>{escape(cfg.timezone)}</div>
-    <div class='card'><b>Post times</b><br/>{escape(post_times)}</div>
+    <div class='card'><b>Всего публикаций</b><br/>{metrics['total_posts']}</div>
+    <div class='card'><b>Публикаций за 24 часа</b><br/>{metrics['posts_last_24h']}</div>
+    <div class='card'><b>Часовой пояс</b><br/>{escape(cfg.timezone)}</div>
+    <div class='card'><b>Время публикаций</b><br/>{escape(post_times)}</div>
   </div>
 
   <h3>Управление</h3>
@@ -72,15 +72,15 @@ def _render_html(cfg: Config, storage: Storage) -> str:
     <button type='submit'>Опубликовать сейчас</button>
   </form>
 
-  <h3>Top sources</h3>
+  <h3>Топ источников</h3>
   <table>
-    <thead><tr><th>Source</th><th>Count</th></tr></thead>
+    <thead><tr><th>Источник</th><th>Количество</th></tr></thead>
     <tbody>{top_sources_rows}</tbody>
   </table>
 
-  <h3>Recent posts</h3>
+  <h3>Последние публикации</h3>
   <table>
-    <thead><tr><th>Posted</th><th>Source</th><th>Title</th><th>Link</th></tr></thead>
+    <thead><tr><th>Время</th><th>Источник</th><th>Заголовок</th><th>Ссылка</th></tr></thead>
     <tbody>{recent_rows}</tbody>
   </table>
 </body>
