@@ -49,6 +49,25 @@ async def status_cmd(message: Message, storage: Storage):
     )
 
 
+@router.message(Command("metrics"))
+async def metrics_cmd(message: Message, storage: Storage):
+    cfg = load_config()
+    chat_id = storage.get_setting("target_chat_id", "").strip() or cfg.target_chat_id
+    if not chat_id:
+        await message.answer("Target chat id not set")
+        return
+    rows = storage.get_latest_metrics(chat_id=str(chat_id), limit=10)
+    if not rows:
+        await message.answer("No metrics yet. Run telethon collector.")
+        return
+    lines = ["Latest metrics:"]
+    for r in rows[:10]:
+        lines.append(
+            f"- msg {r['message_id']}: views={r['views']} forwards={r['forwards']} replies={r['replies']} at {r['captured_at']}"
+        )
+    await message.answer("\n".join(lines))
+
+
 @router.message(Command("postnow"))
 async def postnow_cmd(message: Message, storage: Storage):
     target = storage.get_setting("target_chat_id", "") or str(message.chat.id)
