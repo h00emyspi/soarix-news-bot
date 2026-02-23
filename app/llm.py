@@ -8,11 +8,22 @@ def _strip(s: str) -> str:
 
 
 class LLM:
-    def __init__(self, *, ollama_base_url: str, ollama_model: str, openai_api_key: str, openai_model: str):
+    def __init__(
+        self,
+        *,
+        ollama_base_url: str,
+        ollama_model: str,
+        openai_api_key: str,
+        openai_model: str,
+        timeout_seconds: int = 15,
+        prefer_ollama: bool = True,
+    ):
         self.ollama_base_url = _strip(ollama_base_url).rstrip("/")
         self.ollama_model = _strip(ollama_model)
         self.openai_api_key = _strip(openai_api_key)
         self.openai_model = _strip(openai_model) or "gpt-3.5-turbo"
+        self.timeout_seconds = int(timeout_seconds)
+        self.prefer_ollama = bool(prefer_ollama)
 
     def rewrite_news(self, *, title: str, source: str, link: str, summary: str, lang: str = "ru") -> str:
         sys = (
@@ -35,24 +46,38 @@ class LLM:
 - Не выдумывай факты. Если данных мало - так и скажи.
 """
 
-        # Prefer Ollama
-        ollama = self._ollama_generate(system=sys, prompt=user)
-        if ollama:
-            return ollama
+        if self.prefer_ollama:
+            ollama = self._ollama_generate(system=sys, prompt=user)
+            if ollama:
+                return ollama
+            openai = self._openai_chat(system=sys, user=user)
+            if openai:
+                return openai
+        else:
+            openai = self._openai_chat(system=sys, user=user)
+            if openai:
+                return openai
+            ollama = self._ollama_generate(system=sys, prompt=user)
+            if ollama:
+                return ollama
 
-        # Fallback OpenAI
-        openai = self._openai_chat(system=sys, user=user)
-        if openai:
-            return openai
-
-        return f"{title}\n\n- (нет LLM ответа)\n\n{link}\n#ai"
+        safe_summary = re.sub(r"\s+", " ", (summary or "")).strip()
+        if len(safe_summary) > 280:
+            safe_summary = safe_summary[:280].rstrip() + "…"
+        return (
+            f"{title}\n\n"
+            f"- Источник: {source}\n"
+            f"- Коротко: {safe_summary or '(данных мало)'}\n\n"
+            f"{link}\n"
+            "#ai #llm #agents"
+        )
 
     def _ollama_generate(self, *, system: str, prompt: str) -> str | None:
         if not self.ollama_base_url or not self.ollama_model:
             return None
         try:
             payload = {"model": self.ollama_model, "prompt": f"{system}\n\n{prompt}", "stream": False}
-            r = requests.post(f"{self.ollama_base_url}/api/generate", json=payload, timeout=60)
+            r = requests.post(f"{self.ollama_base_url}/api/generate", json=payload, timeout=self.timeout_seconds)
             if r.status_code != 200:
                 return None
             data = r.json()
@@ -74,7 +99,12 @@ class LLM:
                 "temperature": 0.5,
                 "max_tokens": 650,
             }
-            r = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=60)
+            r = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=self.timeout_seconds,
+            )
             if r.status_code != 200:
                 return None
             data = r.json()
