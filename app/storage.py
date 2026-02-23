@@ -33,6 +33,19 @@ CREATE TABLE IF NOT EXISTS queue (
   UNIQUE(day, slot)
 );
 
+CREATE TABLE IF NOT EXISTS metrics (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  captured_at TEXT,
+  chat_id TEXT,
+  message_id INTEGER,
+  views INTEGER,
+  forwards INTEGER,
+  replies INTEGER,
+  reactions_json TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_metrics_msg ON metrics(chat_id, message_id, captured_at);
+
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT
@@ -312,3 +325,92 @@ class Storage:
         n = cur.fetchone()[0]
         con.close()
         return int(n)
+
+    def add_metric_snapshot(
+        self,
+        *,
+        chat_id: str,
+        message_id: int,
+        captured_at: str,
+        views: int,
+        forwards: int,
+        replies: int,
+        reactions_json: str,
+    ):
+        con = self._conn()
+        cur = con.cursor()
+        cur.execute(
+            """
+            INSERT INTO metrics (captured_at, chat_id, message_id, views, forwards, replies, reactions_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                captured_at,
+                str(chat_id),
+                int(message_id),
+                int(views),
+                int(forwards),
+                int(replies),
+                reactions_json or "{}",
+            ),
+        )
+        con.commit()
+        con.close()
+
+    def list_recent_posted_message_ids(self, day: str | None = None, limit: int = 200):
+        con = self._conn()
+        cur = con.cursor()
+        if day:
+            cur.execute(
+                """
+                SELECT tg_message_id
+                FROM queue
+                WHERE day=? AND status='posted' AND tg_message_id IS NOT NULL
+                ORDER BY posted_at DESC
+                LIMIT ?
+                """,
+                (day, int(limit)),
+            )
+        else:
+            cur.execute(
+                """
+                SELECT tg_message_id
+                FROM queue
+                WHERE status='posted' AND tg_message_id IS NOT NULL
+                ORDER BY posted_at DESC
+                LIMIT ?
+                """,
+                (int(limit),),
+            )
+        rows = cur.fetchall()
+        con.close()
+        return [int(r[0]) for r in rows if r and r[0] is not None]
+
+    def get_latest_metrics(self, *, chat_id: str, limit: int = 10):
+        con = self._conn()
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT message_id, captured_at, views, forwards, replies, reactions_json
+            FROM metrics
+            WHERE chat_id=?
+            ORDER BY captured_at DESC
+            LIMIT ?
+            """,
+            (str(chat_id), int(limit)),
+        )
+        rows = cur.fetchall()
+        con.close()
+        out = []
+        for r in rows:
+            out.append(
+                {
+                    "message_id": r[0],
+                    "captured_at": r[1],
+                    "views": r[2],
+                    "forwards": r[3],
+                    "replies": r[4],
+                    "reactions_json": r[5],
+                }
+            )
+        return out
