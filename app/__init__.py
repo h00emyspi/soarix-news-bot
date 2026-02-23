@@ -1,0 +1,1 @@
+"""SOARIX News Bot package."""
