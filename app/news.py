@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime
+from urllib.parse import urlparse
+
 import feedparser
 
-from .feeds import FEEDS, KEYWORDS
+from .feeds import KEYWORDS
 from .storage import Storage
 
 
@@ -13,9 +14,18 @@ def _contains_keywords(text: str) -> bool:
     return any(k.lower() in t for k in KEYWORDS)
 
 
-def fetch_feeds(storage: Storage) -> int:
+def _source_name(url: str) -> str:
+    try:
+        netloc = urlparse(url).netloc
+        return netloc or url
+    except Exception:
+        return url
+
+
+def fetch_feeds(storage: Storage, rss_feeds: list[str]) -> int:
     added = 0
-    for source, url in FEEDS:
+    for url in (rss_feeds or []):
+        source = _source_name(url)
         feed = feedparser.parse(url)
         for e in feed.entries[:20]:
             title = getattr(e, "title", "") or ""
