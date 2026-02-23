@@ -25,6 +25,11 @@ class Config:
     prefer_ollama: bool
     enable_review: bool
 
+    telethon_api_id: int
+    telethon_api_hash: str
+    telethon_session: str
+    collect_interval_seconds: int
+
     lang: str
 
 
@@ -46,4 +51,9 @@ def load_config() -> Config:
         prefer_ollama=os.getenv("PREFER_OLLAMA", "1").strip() not in ("0", "false", "False"),
         enable_review=os.getenv("ENABLE_REVIEW", "0").strip() in ("1", "true", "True"),
         lang=os.getenv("LANG", "ru").strip(),
+
+        telethon_api_id=int(os.getenv("TELETHON_API_ID", "0") or 0),
+        telethon_api_hash=os.getenv("TELETHON_API_HASH", "").strip(),
+        telethon_session=os.getenv("TELETHON_SESSION", "soarix_telethon").strip() or "soarix_telethon",
+        collect_interval_seconds=int(os.getenv("COLLECT_INTERVAL_SECONDS", "600")),
     )
