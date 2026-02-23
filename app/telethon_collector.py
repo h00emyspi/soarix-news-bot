@@ -40,19 +40,28 @@ async def collect_once(*, storage: Storage) -> tuple[bool, str]:
         return False, "target_chat_id not set"
 
     msg_ids = storage.list_recent_posted_message_ids(limit=200)
-    if not msg_ids:
-        return False, "no posted message_ids in queue yet"
 
     client = TelegramClient(cfg.telethon_session, cfg.telethon_api_id, cfg.telethon_api_hash)
     await client.start()  # first run will ask for phone/code in console
     entity = await client.get_entity(chat_id)
 
     captured_at = _now_utc_iso()
-    msgs = await client.get_messages(entity, ids=msg_ids)
+    if msg_ids:
+        msgs = await client.get_messages(entity, ids=msg_ids)
+    else:
+        # If there is no queue history yet (e.g. bot was just installed),
+        # collect metrics for the most recent posts in the channel.
+        msgs = await client.get_messages(entity, limit=max(5, int(cfg.metrics_recent_limit)))
     count = 0
     for m in msgs:
         if not m:
             continue
+        # Skip service messages if any
+        try:
+            if getattr(m, "message", None) is None and getattr(m, "text", None) is None:
+                continue
+        except Exception:
+            pass
         views = int(getattr(m, "views", 0) or 0)
         forwards = int(getattr(m, "forwards", 0) or 0)
         replies = 0
@@ -75,7 +84,10 @@ async def collect_once(*, storage: Storage) -> tuple[bool, str]:
         count += 1
 
     await client.disconnect()
-    return True, f"snapshots={count}"
+    if count == 0:
+        return False, "no messages collected"
+    mode = "by_queue" if msg_ids else "recent"
+    return True, f"mode={mode} snapshots={count}"
 
 
 async def run_loop(*, storage: Storage):
