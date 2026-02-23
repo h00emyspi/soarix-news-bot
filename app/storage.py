@@ -326,6 +326,57 @@ class Storage:
         con.close()
         return int(n)
 
+    def get_recent_posts(self, limit: int = 30):
+        con = self._conn()
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT source, title, link, posted_at
+            FROM items
+            WHERE posted_at IS NOT NULL
+            ORDER BY posted_at DESC
+            LIMIT ?
+            """,
+            (int(limit),),
+        )
+        rows = cur.fetchall()
+        con.close()
+        return [
+            {"source": r[0], "title": r[1], "link": r[2], "posted_at": r[3]}
+            for r in rows
+        ]
+
+    def get_metrics_summary(self):
+        con = self._conn()
+        cur = con.cursor()
+        cur.execute("SELECT COUNT(1) FROM items WHERE posted_at IS NOT NULL")
+        total_posts = int(cur.fetchone()[0])
+        cur.execute(
+            """
+            SELECT COUNT(1)
+            FROM items
+            WHERE posted_at IS NOT NULL AND posted_at >= datetime('now', '-1 day')
+            """
+        )
+        posts_last_24h = int(cur.fetchone()[0])
+        cur.execute(
+            """
+            SELECT COALESCE(source,'unknown') AS source, COUNT(1) AS cnt
+            FROM items
+            WHERE posted_at IS NOT NULL
+            GROUP BY COALESCE(source,'unknown')
+            ORDER BY cnt DESC
+            LIMIT 10
+            """
+        )
+        top_sources = [{"source": r[0], "count": int(r[1])} for r in cur.fetchall()]
+        con.close()
+        return {
+            "total_posts": total_posts,
+            "posts_last_24h": posts_last_24h,
+            "top_sources": top_sources,
+        }
+
     def add_metric_snapshot(
         self,
         *,
