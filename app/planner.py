@@ -17,13 +17,13 @@ def _today_utc() -> str:
 def ensure_daily_queue(*, storage: Storage, cfg: Config) -> tuple[bool, str]:
     day = _today_utc()
     existing = storage.get_queue(day)
-    if len(existing) >= cfg.posts_per_day:
+    if len(existing) >= cfg.max_posts_per_day:
         return False, "queue already planned"
 
-    added = fetch_feeds(storage)
+    added = fetch_feeds(storage, cfg.rss_feeds)
 
     # Slots come from config times
-    slots = cfg.post_times[: cfg.posts_per_day]
+    slots = cfg.post_times[: cfg.max_posts_per_day]
 
     llm = LLM(
         ollama_base_url=cfg.ollama_base_url,
@@ -85,6 +85,8 @@ def ensure_daily_queue(*, storage: Storage, cfg: Config) -> tuple[bool, str]:
         slots[5] if len(slots) > 5 else "": "general",
     }
 
+    enable_review = bool(cfg.enable_review)
+
     for slot in slots:
         if storage.get_queue_slot(day, slot):
             continue
@@ -107,13 +109,13 @@ def ensure_daily_queue(*, storage: Storage, cfg: Config) -> tuple[bool, str]:
         )
 
         improved = p.post_text
-        if cfg.enable_review:
+        if enable_review:
             t0 = time.time()
             critique = critic.review(post_text=improved, lang=cfg.lang)
             improved = reviser.revise(post_text=improved, critique=critique, lang=cfg.lang)
             # If review cycle is too slow, disable it for this run.
             if (time.time() - t0) > max(6, cfg.llm_timeout_seconds):
-                cfg.enable_review = False
+                enable_review = False
         storage.upsert_queue_slot(
             day=day,
             slot=slot,
