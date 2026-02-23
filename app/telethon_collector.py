@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone
 
 from telethon import TelegramClient
+from telethon.tl.types import PeerChannel, PeerChat, PeerUser
 
 from .config import load_config
 from .storage import Storage
@@ -43,7 +44,32 @@ async def collect_once(*, storage: Storage) -> tuple[bool, str]:
 
     client = TelegramClient(cfg.telethon_session, cfg.telethon_api_id, cfg.telethon_api_hash)
     await client.start()  # first run will ask for phone/code in console
-    entity = await client.get_entity(chat_id)
+
+    entity = None
+    # Robust entity resolution:
+    # - channel ids often come as -100xxxxxxxxxx (Bot API format)
+    # - Telethon expects PeerChannel(channel_id) where channel_id is without -100
+    try:
+        s = str(chat_id).strip()
+        if s.startswith("@"):
+            s = s[1:]
+        if s.startswith("-100") and s[4:].isdigit():
+            entity = await client.get_entity(PeerChannel(int(s[4:])))
+        elif s.lstrip("-").isdigit():
+            n = int(s)
+            if n < 0 and str(n).startswith("-100"):
+                entity = await client.get_entity(PeerChannel(int(str(n)[4:])))
+            else:
+                # fallback: try as-is
+                entity = await client.get_entity(n)
+        else:
+            entity = await client.get_entity(s)
+    except Exception:
+        entity = None
+
+    if not entity:
+        await client.disconnect()
+        return False, f"cannot resolve entity for {chat_id} (try @username)"
 
     captured_at = _now_utc_iso()
     if msg_ids:
