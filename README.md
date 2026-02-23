@@ -5,6 +5,7 @@ Telegram news bot that:
 - rewrites into short Russian Telegram posts via LLM (Ollama or OpenAI)
 - schedules up to 6 posts/day
 - stores state in SQLite to avoid duplicates
+- includes a lightweight web dashboard (metrics + controls)
 
 ## Quick Start
 
@@ -26,6 +27,19 @@ pip install -r requirements.txt
 
 ```bash
 python -m app
+```
+
+Run modes:
+- Bot: `APP_MODE=bot`
+- Dashboard: `APP_MODE=dashboard` (default `http://localhost:8080`)
+- Collector: `APP_MODE=collector`
+
+Linux helper:
+
+```bash
+bash scripts/run.sh
+bash scripts/run.sh dashboard
+bash scripts/run.sh collector
 ```
 
 CLI (optional):
@@ -69,10 +83,29 @@ Then in bot chat:
 
 Key env vars:
 - `TELEGRAM_BOT_TOKEN`
+- `APP_MODE` (`bot|dashboard|collector`)
+- `DASHBOARD_PORT` (default: `8080`)
+- `TIMEZONE` (default: `UTC`)
 - `POST_TIMES` (default: `09:00,12:00,15:00,18:00,21:00,00:00`)
+- `MAX_POSTS_PER_DAY` (1..6)
+- `RSS_FEEDS` (comma-separated)
 - LLM backend:
   - Ollama: `OLLAMA_BASE_URL`, `OLLAMA_MODEL`
   - OpenAI: `OPENAI_API_KEY`, `OPENAI_MODEL`
+
+## Dashboard
+
+Endpoints:
+- `GET /health`
+- `GET /api/metrics`
+- `POST /set-target`
+- `POST /post-now`
+
+## GitHub CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs:
+- `python -m compileall app`
+- `python -m unittest discover -s tests -v`
 
 ## Notes
 
