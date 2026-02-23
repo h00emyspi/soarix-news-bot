@@ -28,11 +28,22 @@ pip install -r requirements.txt
 python -m app
 ```
 
+CLI (optional):
+
+```bash
+python -m app.cli fetch
+python -m app.cli plan
+python -m app.cli queue
+```
+
 ## Bot Setup
 
 1) Start the bot in Telegram: `/start`
-2) Send `/settarget` in the chat/channel you want to post to (bot must be admin in channels)
-3) Optional: `/postnow`
+2) Set a target where to post:
+   - in a chat: send `/settarget`
+   - or in private: `/settarget @your_channel` or `/settarget -100123...`
+3) Plan today queue (optional): `/plan`
+4) Optional immediate post: `/postnow`
 
 ## Config
 
