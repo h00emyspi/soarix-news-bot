@@ -21,6 +21,10 @@ class Config:
     openai_api_key: str
     openai_model: str
 
+    llm_timeout_seconds: int
+    prefer_ollama: bool
+    enable_review: bool
+
     lang: str
 
 
@@ -38,5 +42,8 @@ def load_config() -> Config:
         ollama_model=os.getenv("OLLAMA_MODEL", "qwen3-coder:480b-cloud").strip(),
         openai_api_key=os.getenv("OPENAI_API_KEY", "").strip(),
         openai_model=os.getenv("OPENAI_MODEL", "gpt-3.5-turbo").strip(),
+        llm_timeout_seconds=int(os.getenv("LLM_TIMEOUT_SECONDS", "15")),
+        prefer_ollama=os.getenv("PREFER_OLLAMA", "1").strip() not in ("0", "false", "False"),
+        enable_review=os.getenv("ENABLE_REVIEW", "0").strip() in ("1", "true", "True"),
         lang=os.getenv("LANG", "ru").strip(),
     )
