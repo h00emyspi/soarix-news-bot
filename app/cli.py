@@ -20,7 +20,7 @@ def main():
     storage = Storage(cfg.db_path)
 
     if args.cmd == "fetch":
-        n = fetch_feeds(storage)
+        n = fetch_feeds(storage, cfg.rss_feeds)
         print(f"fetched={n} items_in_db={storage.count_items()}")
         return
 
